@@ -1,0 +1,208 @@
+{set;~user;192183378680741888}
+{set;~allowedChannel;426344189895245824}
+
+{//; Set variables if they don't exist.}
+{if;{get;minimumWords};==;;{set;minimumWords;1}}
+
+{set;~color;#686af2}
+{set;~failureColor;#f4722c}
+{set;~successColor;#00ff00}
+
+{set;~applicationHelp;
+	For your application, it is suggested that you introduce yourself and why you are interested in joining Shadowhawk.
+}
+
+{//;This thing removes the flags from the arguments so that they don't end up in the final message}
+{function;cleanArgs;
+    {regexreplace;{params;0};/-\w{1}\s(\w+)/g;}
+}
+
+{function;checkAllowedChannel;
+	{if;{channelid};!=;{get;~allowedChannel};
+		{func.disallowedChannel}
+	}
+}
+
+{function;disallowedChannel;
+	{embed;{buildembed;
+		title: Suggestion Command;
+		description: {unindent;
+			Please use this command in <#{get;~allowedChannel}> instead.
+		};
+		color: {get;~color}
+	}}
+	{return}
+}
+		
+{//;This help message will show if -h is passed to the command, or if help is the first argument (word).}
+{function;help;
+	{set;~staffHelpString;
+		{if;{isStaff;{userid}};
+			{newline}
+			Moderator subcommands:
+			`setMinimumWords <number>` - Set the minimum words required in a application.
+			`unsetAlreadyApplied <user>` - Unset the already applied variable for a user.
+			;
+		}
+	}
+
+    {embed;{buildembed;
+        title: Shadowhawk Application Command;
+		description: {unindent;
+		Sends an application for you to be whitelisted on Shadowhawk.
+		{get;~applicationHelp}
+		Usage: `b!shadowhawkapply <application> -u <Minecraft username>`
+		Please specify your **Minecraft** username after your application or the owner will not be able to whitelist you.
+		{get;~staffHelpString}
+		};
+        color: {get;~color}
+    }}
+}
+
+{function;stopIfNotMod;
+    {if;{isstaff;{userid}};;
+        {embed;{buildembed;
+            title: Access Denied;
+            description: This subcommand requires staff privileges and you are not a staff member.;
+            color: {get;~failureColor}
+        }}
+        {return}
+    }
+}
+
+{function;setMinimumWords;
+    {set;minimumWords;{args;1}}
+    :ok_hand: Set minimum word length of applications to {args;1}.
+}
+
+{function;checkMinimumWords;
+    {if;{argslength};<;{get;minimumWords};
+        {embed;{buildembed;
+            title: Oops!;
+            description: Your application was too short. We have a {get;minimumWords} word minimum in order to ensure applicants are trustworthy.;
+            color: {get;~failureColor}
+        }}
+        {return}
+    }
+}
+
+{function;validateUsername;
+    {regextest;{params;0};/\s/}
+}
+
+{function;invalidUsername;
+	{embed;{buildembed;
+		title: Oops!;
+		description: That Minecraft username doesn't look right. Make sure there are no spaces in it.;
+		color: {get;~failureColor}
+	}}
+	{return}
+}
+
+{function;noUsername;
+	{embed;{buildembed;
+		title: Oops!;
+		description: It appears that you have not specified a Minecraft username. Use the `-u <Minecraft username>` flag after your application to specify your Minecraft username.;
+		color: {get;~failureColor}
+	}}
+	{return}
+}
+
+{function;checkUsername;
+	{if;{flagset;u};
+		{set;~applicant;{flag;u}}
+		{if;{func.validateUsername;{get;~applicant}};!=;false;
+			{func.invalidUsername}
+		}
+		;
+		{func.noUsername}
+	}
+}
+
+{function;alreadyApplied;
+	{embed;{buildembed;
+		title: Oops!;
+		description: It appears you have already applied to Shadowhawk! If there are any urgent changes (such as writing the incorrect username) you need to make to your application you can message a moderator, who can unset your already applied variable. Take note, though, that a lack of response is not a valid reason to reapply.;
+		color: {get;~failureColor}
+	}}
+	{return}
+}
+
+{function;checkAlreadyApplied;
+	{if;{get;tfcPlus{userid}hasApplied};==;true;
+		{func.alreadyApplied}
+	}
+}
+
+{function;unsetAlreadyApplied;
+	{if;{argslength};>=;2;
+		{set;tfcPlus{userid}hasApplied;}
+		{commit;tfcPlus{userid}hasApplied}
+		{embed;{buildembed;
+			title: Success;
+			description: :ok_hand: Unset already applied variable for {username;{args;1}} ({userid;{args;1}}).;
+			color: {get;~successColor}
+		}}
+		;
+		{embed;{buildembed;
+			title: Oops!;
+			description: You didn't specify a user to unset the already applied variable of!;
+			color: {get;~failureColor}
+		}}
+	}
+}
+
+{function;sendApplication;
+	{set;~usernameString;**Minecraft Username**: {get;~applicant}}
+
+    {set;~embed;
+        {buildembed;
+            title: Shadowhawk Application;
+            description: {get;~usernameString} {newline} {get;~application};
+            timestamp: {time};
+            author.icon_url: {useravatar};
+            author.name: {username};
+            color: {get;~color}
+         }
+    }
+
+	{void;
+		{dm;{get;~user};{get;~embed}}
+	}
+	
+	{set;tfcPlus{userid}hasApplied;true}
+	{commit;tfcPlus{userid}hasApplied}
+
+    {embed;{buildembed;
+        title: Success;
+        description: {unindent;
+		Submitted your application. Please wait for the owner to respond. It typically takes up to a week.
+		Application: `{get;~application}`
+		Minecraft Username: `{get;~applicant}`
+		}
+		;
+        color: {get;~successColor}
+    }}
+}
+
+{function;makeApplication;
+    {set;~application;{func.cleanArgs;{args;0;n}}}
+	{func.checkAlreadyApplied}
+    {func.checkMinimumWords}
+	{func.checkUsername}
+    {func.sendApplication}
+}
+
+{func.checkAllowedChannel}
+{if;{argslength};<;1;{func.help}
+;
+{if;{flagset;h};==;true;{func.help}
+;
+{switch;{args;0}
+    ;["h", "help"];{func.help}
+    ;["setMinimumWords"];{func.stopIfNotMod} {func.setMinimumWords}
+	;["unsetAlreadyApplied"];{func.stopIfNotMod} {func.unsetAlreadyApplied}
+    ;{func.makeApplication}
+}
+}
+}   

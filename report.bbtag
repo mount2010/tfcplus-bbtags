@@ -1,0 +1,7 @@
+{set;~bugreportColor;#f4722c}
+
+{embed;{buildembed;
+	title: Bug Report Command;
+	description: Use `b!bugreport` instead.;
+	color: {get;~bugreportColor}
+}}

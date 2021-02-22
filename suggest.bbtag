@@ -1,0 +1,260 @@
+{set;~suggestionChannel;426338146259566602}
+{set;~allowedChannel;426344189895245824}
+{set;~attachments;{messageattachments}}
+
+{//; Set variables if they don't exist.}
+{if;{get;minimumWords};==;;{set;minimumWords;1}}
+
+{set;~color;#686af2}
+{set;~ideaColor;#09e9f9}
+{set;~changeColor;#0925f9}
+{set;~successColor;#00ff00}
+
+{set;~a;🇦}
+{set;~b;🇧}
+
+{set;~white_check_mark;✅}
+
+{function;cleanArgs;
+    {regexreplace;{params;0};/-\w{1}\s(\w+)/g;}
+}
+
+{function;checkAllowedChannel;
+	{if;{channelid};!=;{get;~allowedChannel};
+		{func.disallowedChannel}
+	}
+}
+
+{function;disallowedChannel;
+	{embed;{buildembed;
+		title: Suggestion Command;
+		description: {unindent;
+			Please use this command in <#{get;~allowedChannel}> instead.
+		};
+		color: {get;~color}
+	}}
+	{return}
+}
+		
+{//;This help message will show if -h is passed to the command, or if help is the first argument (word).}
+{function;help;
+	{set;~staffHelpString;
+		{if;{isStaff;{userid}};
+			{newline}
+			Moderator subcommands:
+			`unsetFirstTime <user>` - Unset the "first time suggester" variable for a user.
+			`setMinimumWords <number>` - Set the minimum words required in a suggestion.
+			;
+		}
+	}
+
+    {embed;{buildembed;
+        title: Suggestion Command;
+        description: {unindent;
+        Sends a suggestion to the suggestion channel.
+        Usage: `b!suggest <suggestion> -t type`
+		Vaild types:
+        `idea` - (ideas for new features)
+        `change` - (ideas for changes to existing features)
+		{get;~staffHelpString}
+        };
+        color: {get;~color}
+    }}
+}
+
+{function;stopIfNotMod;
+    {if;{isstaff;{userid}};;
+        {embed;{buildembed;
+            title: Access Denied;
+            description: This subcommand requires staff privileges and you are not a staff member.;
+            color: {get;~color}
+        }}
+        {return}
+    }
+}
+
+{function;setMinimumWords;
+    {set;minimumWords;{args;1}}
+    :ok_hand: Set minimum word length of suggestions to {args;1}.
+}
+
+{function;checkMinimumWords;
+    {if;{argslength};<;{get;minimumWords};
+        {embed;{buildembed;
+            title: Oops!;
+            description: Your suggestion was too short. We have a {get;minimumWords} word minimum in order to maintain the detail needed for a good suggestion. Consider elaborating on your suggestion. If you need help elaborating, please ask the rest of the community.;
+            color: {get;~color}
+        }}
+        {return}
+    }
+}
+
+{function;askForType;
+    {set;~typeMessageId;
+        {send;{channelid};;
+            {buildembed;
+                title: Please specify a type;
+                description: {unindent;
+                {get;~a} - Idea (ideas for new features)
+                {get;~b} - Change (ideas for changes to existing features)
+                *In the future, you can also append `-t type` to skip this menu.*
+                };
+                color: {get;~color};
+            }
+        }
+    }
+    {addreact;{channelid};{get;~typeMessageId};{get;~a};{get;~b}}
+    {set;~reaction;{waitreact;{get;~typeMessageId};;[{get;~a}, {get;~b}];true;60}}
+    {if;{length;{get;~reaction}};!=;4;
+		{embed;{buildembed;
+			title: Timed out;
+			description: The prompt timed out - your suggestion will not be sent.;
+			color: {get;~color}
+		}}
+        {return}
+    }
+    {//; Finally get the reaction.}
+    {set;~reaction;{get;~reaction;3}}
+    {switch;{get;~reaction}
+        ;{get;~a};{set;~type;idea}
+        ;{get;~b};{set;~type;change}
+        ;{set;~type;unknown}
+    }
+}
+
+{function;checkType;
+    {regextest;{params;0};/^(idea|change)$/}
+}
+
+{function;getType;
+    {if;{flagset;t};
+        {set;~typeFlag;{lower;{flag;t}}}
+        {if;{func.checkType;{get;~typeFlag}};!=;false;
+            {set;~type;{get;~typeFlag}}
+            ;
+            {func.askForType}
+        }
+        ;
+        {func.askForType}
+    }
+}
+
+{function;getTypeColor;
+    {switch;{params;0}
+        ;idea;{get;~ideaColor}
+        ;change;{get;~changeColor}
+        ;unknown;{get;~ideaColor}
+		;{get;~ideaColor}
+    }
+}
+
+{function;getTypeString;
+    {switch;{params;0}
+        ;idea;Idea
+		;change;Change
+        ;unknown;Unknown! This is a problem, please report to the admins.
+		;Type not set! This is a problem, please report to the admins.
+    }
+}
+
+{function;sendSuggestion;
+    {set;~attachmentsString;
+        {if;{length;{get;~attachments}};>;0;
+            **Attachments:**{foreach;~attachment;{get;~attachments};{newline}{get;~attachment}}
+            ;
+        }
+    }
+
+    {set;~typeString;**Type**: {func.getTypeString;{get;~type}}}
+
+    {set;~embed;
+        {buildembed;
+            title: Suggestion;
+            description: {get;~typeString} {newline} {get;~suggestion} {newline} {get;~attachmentsString};
+            timestamp: {time};
+            author.icon_url: {useravatar};
+            author.name: {username};
+            color: {func.getTypeColor;{get;~type}}
+         }
+    }
+
+    {//;Send suggestion}
+    {void;
+        {set;~suggestionMessageId;
+            {send;{get;~suggestionChannel};
+                {get;~embed}
+            }
+        }
+        {addreact;{get;~suggestionChannel};{get;~suggestionMessageId};👍}
+        {addreact;{get;~suggestionChannel};{get;~suggestionMessageId};👎}
+    }
+    {embed;{buildembed;
+        title: Success;
+        description: Submitted your suggestion.;
+        color: {get;~successColor}
+    }}
+}
+
+{function;makeSuggestion;
+    {set;~suggestion;{func.cleanArgs;{args;0;n}}}
+    {func.checkMinimumWords}
+	{func.getType}
+    {func.sendSuggestion}
+}
+
+{function;checkFirstTime;
+	{if;{get;{userid}FirstTime};==;;
+		{set;~embed;{buildembed;
+			title: Suggestion Command;
+			description: {unindent;
+				**Thank you for submitting a suggestion for TFC+!**
+				As this is your first time using this system, there are a few things to take note before finalizing your submission:{newline}
+				**Have you discussed your suggestion with the community?** If not, please wait until you have tried to get feedback about your suggestion by discussing it in <#512874918241632285>.
+				**Has your suggestion been denied previously by the developer?** Using the from: function of Discord's search will allow you to see if Dunkleosteus has mentioned keywords related to your suggestion himself.
+				**Has your suggestion already been suggested?** Using the in: feature of Discord's search will allow you to search for keywords related to your suggestion to make sure it is not a duplicate. If it is, please use the reaction system to add a 👍 to the existing suggestion.
+				**Does your suggestion fit thematically in TFC+?** Make sure that your suggestion is reasonable enough to be added into the game. If you are not sure, ask for feedback from other community members.{newline}
+				Please try to be as detailed as possible in your suggestion. There is a {get;minimumWords} word minimum and we encourage members of the community to go beyond that.
+				If you feel confident that you have met these criteria, please click the {get;~white_check_mark} below. Good luck.
+			};
+			color: {get;~color}
+		}}
+		{set;~firstTimeMessageId;{send;{channelid};;
+			{get;~embed}
+		}}
+		{addreact;{channelid};{get;~firstTimeMessageId};{get;~white_check_mark}}
+    	{set;~reaction;{waitreact;{get;~firstTimeMessageId};;[{get;~white_check_mark}];true;60}}
+		{if;{length;{get;~reaction}};!=;4;
+			{return}
+		}
+		{//;Here we can be sure that the reaction was the correct emoji and was clicked.}
+		{set;{userid}FirstTime;true}
+		{commit;{userid}FirstTime}
+		{embed;{buildembed;
+			title: Suggestion Command;
+			description: Thank you for accepting the policies. You may now send your suggestion.;
+			color: {get;~color}
+		}}
+		{return}
+	}
+}
+
+{function;unsetFirstTime;
+	{set;{userid;{args;1}}FirstTime;}
+	{commit;{userid}FirstTime}
+	:ok_hand: Unset first time variable for {userid;{args;1}}.
+}
+
+{func.checkAllowedChannel}
+{func.checkFirstTime}
+{if;{argslength};<;1;{func.help}
+;
+{if;{flagset;h};==;true;{func.help}
+;
+{switch;{args;0}
+    ;["h", "help"];{func.help}
+    ;["setMinimumWords"];{func.stopIfNotMod} {func.setMinimumWords}
+	;["unsetFirstTime"];{func.stopIfNotMod} {func.unsetFirstTime}
+    ;{func.makeSuggestion}
+}
+}
+}   

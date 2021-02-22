@@ -1,0 +1,268 @@
+{set;~reportChannel;654342699419303956}
+{set;~allowedChannel;426344189895245824}
+{set;~attachments;{messageattachments}}
+
+{//; Set variables if they don't exist.}
+{if;{get;minimumWords};==;;{set;minimumWords;1}}
+
+{set;~crashColor;#fc3f4b}
+{set;~bugreportColor;#f4722c}
+{set;~issueColor;#e8ac2c}
+{set;~successColor;#00ff00}
+
+{set;~a;🇦}
+{set;~b;🇧}
+{set;~c;🇨}
+
+{set;~white_check_mark;✅}
+
+{//;This thing removes the flags from the arguments so that they don't end up in the final message}
+{function;cleanArgs;
+    {regexreplace;{params;0};/-\w{1}\s(\w+)/g;}
+}
+
+{function;checkAllowedChannel;
+	{if;{channelid};!=;{get;~allowedChannel};
+		{func.disallowedChannel}
+	}
+}
+
+{function;disallowedChannel;
+	{embed;{buildembed;
+		title: Bug Report Command;
+		description: {unindent;
+			Please use this command in <#{get;~allowedChannel}> instead.
+		};
+		color: {get;~bugreportColor}
+	}}
+	{return}
+}
+
+{//;This help message will show if -h is passed to the command, or if help is the first argument (word).}
+{function;help;
+	{set;~staffHelpString;
+		{if;{isStaff;{userid}};
+			{newline}
+			Moderator subcommands:
+			`unsetFirstTime <user>` - Unset the "first time reporter" variable for a user.
+			`setMinimumWords <number>` - Set the minimum words required in a bug report.
+			;
+		}
+	}
+
+    {embed;{buildembed;
+        title: Bug Report Command;
+        description: {unindent;
+        Sends a bug report to the bug report channel.
+        Usage: `b!bugreport <report> -s severity`
+        Valid severities:
+        `crash` (issues that cause game crashes)
+        `bugreport` (issues with game features, loss of item/substantial progress)
+        `issue` (typos, localization issues, inconvinences)
+		{get;~staffHelpString}
+        };
+        color: {get;~bugreportColor}
+    }}
+}
+
+{function;checkSeverity;
+    {regextest;{params;0};/^(crash|bugreport|issue)$/}
+}
+
+{function;stopIfNotMod;
+    {if;{isstaff;{userid}};;
+        {embed;{buildembed;
+            title: Access Denied;
+            description: This subcommand requires staff privileges and you are not a staff member.;
+            color: {get;~bugreportColor}
+        }}
+        {return}
+    }
+}
+
+{function;setMinimumWords;
+    {set;minimumWords;{args;1}}
+    :ok_hand: Set minimum word length of bug reports to {args;1}.
+}
+
+{function;checkMinimumWords;
+    {if;{argslength};<;{get;minimumWords};
+        {embed;{buildembed;
+            title: Oops!;
+            description: Your bug report was too short. In order to maintain the detail needed for the developer to effectively fix your bug, we have set a minimum length for bug reports. Please write more details about the bug you have experienced.;
+            color: {get;~bugreportColor}
+        }}
+        {return}
+    }
+}
+
+{function;askForSeverity;
+    {set;~severityMessageId;
+        {send;{channelid};;
+            {buildembed;
+                title: Please specify a severity;
+                description: {unindent;
+                {get;~a} - Crash (issues that cause game crashes)
+                {get;~b} - Bug Report (issues with game features, loss of item/substantial progress)
+                {get;~c} - Issue (typos, localization issues, inconvinences)
+                *In the future, you can also append `-s severity` to skip this menu.*
+                };
+                color: {get;~bugreportColor};
+            }
+        }
+    }
+    {addreact;{channelid};{get;~severityMessageId};{get;~a};{get;~b};{get;~c}}
+    {set;~reaction;{waitreact;{get;~severityMessageId};;[{get;~a}, {get;~b}, {get;~c}];true;60}}
+    {if;{length;{get;~reaction}};!=;4;
+		{embed;{buildembed;
+			title: Timed out;
+			description: The prompt timed out - your bug report will not be sent.;
+			color: {get;~bugreportColor}
+		}}
+        {return}
+    }
+    {//; Finally get the reaction.}
+    {set;~reaction;{get;~reaction;3}}
+    {switch;{get;~reaction}
+        ;{get;~a};{set;~severity;crash}
+        ;{get;~b};{set;~severity;bugreport}
+        ;{get;~c};{set;~severity;issue}
+        ;{set;~severity;unknown}
+    }
+}
+
+{function;getSeverity;
+    {if;{flagset;s};
+        {set;~severityFlag;{lower;{flag;s}}}
+        {if;{func.checkSeverity;{get;~severityFlag}};!=;false;
+            {set;~severity;{get;~severityFlag}}
+            ;
+            {func.askForSeverity}
+        }
+        ;
+        {func.askForSeverity}
+    }
+}
+
+{function;getSeverityColor;
+    {switch;{params;0}
+        ;crash;{get;~crashColor}
+        ;bugreport;{get;~bugreportColor}
+        ;issue;{get;~issueColor}
+        ;unknown;{get;~issueColor}
+		;{get;~issueColor}
+    }
+}
+
+{function;getSeverityString;
+    {switch;{params;0}
+        ;crash;Crash
+        ;bugreport;Bug Report
+        ;issue;Issue
+        ;unknown;Unknown! This is a problem, please report to the admins.
+		;Severity not set! This is a problem, please report to the admins.
+    }
+}
+
+
+{function;sendReport;
+    {set;~attachmentsString;
+        {if;{length;{get;~attachments}};>;0;
+            **Attachments:**{foreach;~attachment;{get;~attachments};{newline}{get;~attachment}}
+            ;
+        }
+    }
+    
+    {set;~severityString;**Severity**: {func.getSeverityString;{get;~severity}}}
+
+    {set;~embed;
+        {buildembed;
+            title: Bug Report;
+            description: {get;~severityString} {newline} {get;~report} {newline} {get;~attachmentsString};
+            timestamp: {time};
+            author.icon_url: {useravatar};
+            author.name: {username};
+            color: {func.getSeverityColor;{get;~severity}}
+         }
+    }
+
+    {//;Send report}
+    {void;
+        {set;~reportMessageId;
+            {send;{get;~reportChannel};
+                {get;~embed}
+            }
+        }
+        {addreact;{get;~reportChannel};{get;~reportMessageId};<:this:665303275473731595>}
+    }
+    {embed;{buildembed;
+        title: Success;
+        description: Submitted your bug report.;
+        color: {get;~successColor}
+    }}
+}
+
+{function;makeReport;
+    {set;~report;{func.cleanArgs;{args;0;n}}}
+    {func.checkMinimumWords}
+    {func.getSeverity}
+    {func.sendReport}
+}
+
+{function;checkFirstTime;
+	{if;{get;{userid}FirstTime};==;;
+		{set;~embed;{buildembed;
+			title: Bug Report Command;
+			description: {unindent;
+				**Thank you for submitting a bug report for TFC+!**
+				As this is your first time using this system, there are a few things to take note before finalizing your submission:{newline}
+				**Are you playing with any addons or additional mods?** If so, disable them and test your bug.
+				**Are you playing on the most recent version of TFC+?** Check <#569829325084557313> to make sure.
+				**Has your bug been submitted already by another player?** Using the in: feature of Discord's search will allow you to search for keywords related to your bug to make sure it's not a duplicate. If it is, unless you have substantial information to add to the bug previously reported, please use the reaction feature to add a <:this:665303275473731595> to the existing report.
+				**Have you been as detailed as possible?** Have you detailed what you were doing, or how to reproduce the issue in question?{newline}
+				There is a {get;minimumWords} word minimum and we encourage you to go well beyond this when writing your bug report.
+				You may also want to discuss the issue you are having in <#426341031127285761> in order to make sure it is not a feature you are interacting with incorrectly. For example, you may be trying to pickle food that is not already brined, or attempting to make a teepee out of a full bear or wolf fur instead of large or medium fur scraps.
+				If you are confident the issue you are having is a bug of TFC+, continue by clicking the {get;~white_check_mark} below.
+			};
+			color: {get;~bugreportColor}
+		}}
+		{set;~firstTimeMessageId;{send;{channelid};;
+			{get;~embed}
+		}}
+		{addreact;{channelid};{get;~firstTimeMessageId};{get;~white_check_mark}}
+    	{set;~reaction;{waitreact;{get;~firstTimeMessageId};;[{get;~white_check_mark}];true;60}}
+		{if;{length;{get;~reaction}};!=;4;
+			{return}
+		}
+		{//;Here we can be sure that the reaction was the correct emoji and was clicked.}
+		{set;{userid}FirstTime;true}
+		{commit;{userid}FirstTime}
+		{embed;{buildembed;
+			title: Bug Report Command;
+			description: Thank you for accepting the policies. You may now send your bug report.;
+			color: {get;~bugreportColor}
+		}}
+		{return}
+	}
+}
+
+{function;unsetFirstTime;
+	{set;{userid;{args;1}}FirstTime;}
+	{commit;{userid}FirstTime}
+	:ok_hand: Unset first time variable for {userid;{args;1}}.
+}
+
+{func.checkAllowedChannel}
+{func.checkFirstTime}
+{if;{argslength};<;1;{func.help}
+;
+{if;{flagset;h};==;true;{func.help}
+;
+{switch;{args;0}
+    ;["h", "help"];{func.help}
+    ;["setMinimumWords"];{func.stopIfNotMod} {func.setMinimumWords}
+	;["unsetFirstTime"];{func.stopIfNotMod} {func.unsetFirstTime}
+    ;{func.makeReport}
+}
+}
+}   
