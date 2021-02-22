@@ -89,7 +89,7 @@
     {if;{argslength};<;{get;minimumWords};
         {embed;{buildembed;
             title: Oops!;
-            description: Your bug report was too short. In order to maintain the detail needed for the developer to effectively fix your bug, we have set a minimum length for bug reports. Please write more details about the bug you have experienced.;
+            description: Your bug report was too short. In order to maintain the detail needed for the developer to effectively fix your bug, we have set a {get;minimumWords} word minimum for bug reports. Please write more details about the bug you have experienced.;
             color: {get;~bugreportColor}
         }}
         {return}
@@ -219,7 +219,7 @@
 				**Are you playing with any addons or additional mods?** If so, disable them and test your bug.
 				**Are you playing on the most recent version of TFC+?** Check <#569829325084557313> to make sure.
 				**Has your bug been submitted already by another player?** Using the in: feature of Discord's search will allow you to search for keywords related to your bug to make sure it's not a duplicate. If it is, unless you have substantial information to add to the bug previously reported, please use the reaction feature to add a <:this:665303275473731595> to the existing report.
-				**Have you been as detailed as possible?** Have you detailed what you were doing, or how to reproduce the issue in question?{newline}
+				**Have you been as detailed as possible?** Have you detailed what you were doing, or how to reproduce the issue in question? It is impossible for the developer to review all conversations, so make sure that all the details are specified in your bug report.{newline}
 				There is a {get;minimumWords} word minimum and we encourage you to go well beyond this when writing your bug report.
 				You may also want to discuss the issue you are having in <#426341031127285761> in order to make sure it is not a feature you are interacting with incorrectly. For example, you may be trying to pickle food that is not already brined, or attempting to make a teepee out of a full bear or wolf fur instead of large or medium fur scraps.
 				If you are confident the issue you are having is a bug of TFC+, continue by clicking the {get;~white_check_mark} below.

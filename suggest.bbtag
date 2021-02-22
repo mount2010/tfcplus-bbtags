@@ -213,6 +213,7 @@
 				**Has your suggestion been denied previously by the developer?** Using the from: function of Discord's search will allow you to see if Dunkleosteus has mentioned keywords related to your suggestion himself.
 				**Has your suggestion already been suggested?** Using the in: feature of Discord's search will allow you to search for keywords related to your suggestion to make sure it is not a duplicate. If it is, please use the reaction system to add a 👍 to the existing suggestion.
 				**Does your suggestion fit thematically in TFC+?** Make sure that your suggestion is reasonable enough to be added into the game. If you are not sure, ask for feedback from other community members.{newline}
+				**Is the suggestion self-contained?** It is impossible for the developer to review all conversations. Make sure that all the details of your suggestion are included in your post.
 				Please try to be as detailed as possible in your suggestion. There is a {get;minimumWords} word minimum and we encourage members of the community to go beyond that.
 				If you feel confident that you have met these criteria, please click the {get;~white_check_mark} below. Good luck.
 			};
